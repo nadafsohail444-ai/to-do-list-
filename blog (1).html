@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Blog</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: #fdfcfa;
+    color: #2b2b2b;
+  }
+  header {
+    padding: 24px 20px;
+    border-bottom: 2px solid #2b2b2b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  header h1 { margin: 0; font-size: 26px; }
+  button {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    background: #2b2b2b;
+    color: #fff;
+    cursor: pointer;
+  }
+  button.secondary { background: #eee; color: #2b2b2b; }
+  button.danger { background: #b23b3b; }
+  main { max-width: 700px; margin: 0 auto; padding: 24px 20px 80px; }
+  .empty { text-align: center; color: #888; padding: 60px 10px; }
+  .post { padding: 20px 0; border-bottom: 1px solid #ddd; cursor: pointer; }
+  .post h2 { margin: 0 0 6px; font-size: 22px; }
+  .post .date { font-family: Arial, sans-serif; font-size: 12px; color: #999; margin-bottom: 8px; }
+  .post p { margin: 0; color: #444; line-height: 1.5; }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 30px 16px; overflow-y: auto; z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .sheet { background: #fff; max-width: 640px; width: 100%; border-radius: 8px; padding: 26px; margin-top: 20px; }
+  .sheet input, .sheet textarea {
+    width: 100%; font-family: Georgia, serif; font-size: 16px;
+    border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;
+  }
+  .sheet input { font-size: 22px; font-weight: bold; }
+  .sheet textarea { min-height: 260px; line-height: 1.6; resize: vertical; }
+  .sheet .row { display: flex; justify-content: flex-end; gap: 10px; }
+
+  .read-title { font-size: 28px; margin: 0 0 6px; }
+  .read-date { font-family: Arial, sans-serif; font-size: 12px; color: #999; margin-bottom: 20px; }
+  .read-body { font-size: 17px; line-height: 1.75; white-space: pre-wrap; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #2b2b2b; color: #fff; font-family: Arial, sans-serif; font-size: 13px;
+    padding: 10px 18px; border-radius: 20px; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  .lock-screen {
+    position: fixed; inset: 0; background: #fdfcfa; z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .lock-box { max-width: 340px; width: 100%; text-align: center; }
+  .lock-box h1 { font-size: 24px; margin: 0 0 6px; }
+  .lock-box p { font-family: Arial, sans-serif; font-size: 13px; color: #888; margin: 0 0 20px; }
+  .lock-box input {
+    width: 100%; font-family: Arial, sans-serif; font-size: 16px;
+    border: 1px solid #ccc; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px;
+  }
+  .lock-box button { width: 100%; padding: 12px; font-size: 14px; margin-top: 6px; }
+  .lock-error { color: #b23b3b; font-family: Arial, sans-serif; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+  .lock-note { font-family: Arial, sans-serif; font-size: 11.5px; color: #aaa; margin-top: 16px; line-height: 1.5; }
+  .logout-link {
+    font-family: Arial, sans-serif; font-size: 12px; color: #888; background: none;
+    border: none; cursor: pointer; text-decoration: underline; padding: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-box">
+    <h1 id="lockHeading">Set a Password</h1>
+    <p id="lockSubtext">Protect your blog with a password.</p>
+    <input type="password" id="passwordInput" placeholder="Password" />
+    <input type="password" id="passwordConfirm" placeholder="Confirm password" />
+    <button id="lockActionBtn">Set Password</button>
+    <div class="lock-error" id="lockError"></div>
+    <div class="lock-note" id="lockNote"></div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+  <header>
+    <h1>My Blog</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <button class="logout-link" id="logoutBtn">Log out</button>
+      <button id="newPostBtn">+ New Post</button>
+    </div>
+  </header>
+  <main>
+    <div class="empty" id="emptyState" style="display:none;">
+      No posts yet. Click "+ New Post" to write your first one.
+    </div>
+    <div id="postList"></div>
+  </main>
+</div>
+
+<!-- Editor -->
+<div class="overlay" id="editorOverlay">
+  <div class="sheet">
+    <input id="titleInput" placeholder="Post title" />
+    <textarea id="bodyInput" placeholder="Write your post here..."></textarea>
+    <div class="row">
+      <button class="secondary" id="cancelBtn">Cancel</button>
+      <button id="saveBtn">Save Post</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reader -->
+<div class="overlay" id="readOverlay">
+  <div class="sheet">
+    <div class="read-title" id="readTitle"></div>
+    <div class="read-date" id="readDate"></div>
+    <div class="read-body" id="readBody"></div>
+    <div class="row" style="margin-top:24px;">
+      <button class="secondary" id="closeReadBtn">Close</button>
+      <button id="editFromReadBtn">Edit</button>
+      <button class="danger" id="deleteFromReadBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const POSTS_KEY = "simple-blog-posts";
+  const AUTH_KEY = "simple-blog-auth";
+  let posts = [];
+  let editingId = null;
+  let readingId = null;
+  let authHash = null;
+  let unlocked = false;
+
+  // Storage: Claude's cloud storage when available (syncs across any device
+  // logged into your Claude account), otherwise this browser's localStorage
+  // (that case is local to this device/browser only).
+  const usingCloudStorage = typeof window.storage !== "undefined";
+
+  async function storeGet(key) {
+    if (usingCloudStorage) {
+      const res = await window.storage.get(key, false);
+      return res ? res.value : null;
+    }
+    return localStorage.getItem(key);
+  }
+  async function storeSet(key, value) {
+    if (usingCloudStorage) {
+      await window.storage.set(key, value, false);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  }
+
+  async function sha256(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1800);
+  }
+  function escapeHtml(s) {
+    return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function excerpt(text) {
+    const t = (text || "").trim();
+    return t.length > 160 ? t.slice(0, 160) + "…" : t;
+  }
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // --- Lock screen ---
+  const lockScreen = document.getElementById("lockScreen");
+  const appRoot = document.getElementById("appRoot");
+  const passwordInput = document.getElementById("passwordInput");
+  const passwordConfirm = document.getElementById("passwordConfirm");
+  const lockError = document.getElementById("lockError");
+  const lockHeading = document.getElementById("lockHeading");
+  const lockSubtext = document.getElementById("lockSubtext");
+  const lockActionBtn = document.getElementById("lockActionBtn");
+  const lockNote = document.getElementById("lockNote");
+
+  function showLockScreen() {
+    const isFirstRun = !authHash;
+    lockHeading.textContent = isFirstRun ? "Set a Password" : "Enter Password";
+    lockSubtext.textContent = isFirstRun ? "Protect your blog with a password." : "This blog is locked.";
+    lockActionBtn.textContent = isFirstRun ? "Set Password" : "Unlock";
+    passwordConfirm.style.display = isFirstRun ? "block" : "none";
+    lockNote.textContent = usingCloudStorage
+      ? "Synced to your Claude account — this password and your posts follow you to any device where you're logged into Claude."
+      : "Saved only in this browser on this device — opening this file in a different browser or device will not show these posts.";
+    passwordInput.value = "";
+    passwordConfirm.value = "";
+    lockError.textContent = "";
+    lockScreen.style.display = "flex";
+    appRoot.style.display = "none";
+    setTimeout(() => passwordInput.focus(), 50);
+  }
+
+  lockActionBtn.onclick = async () => {
+    const pw = passwordInput.value;
+    lockError.textContent = "";
+    if (!authHash) {
+      // First run: set a new password
+      if (pw.length < 4) {
+        lockError.textContent = "Password must be at least 4 characters.";
+        return;
+      }
+      if (pw !== passwordConfirm.value) {
+        lockError.textContent = "Passwords don't match.";
+        return;
+      }
+      authHash = await sha256(pw);
+      await storeSet(AUTH_KEY, authHash);
+      showToast("Password set");
+      await unlock();
+    } else {
+      // Returning: check password
+      const hash = await sha256(pw);
+      if (hash === authHash) {
+        await unlock();
+      } else {
+        lockError.textContent = "Wrong password.";
+      }
+    }
+  };
+
+  passwordConfirm.addEventListener("keydown", (e) => { if (e.key === "Enter") lockActionBtn.click(); });
+  passwordInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && passwordConfirm.style.display === "none") lockActionBtn.click();
+  });
+
+  async function unlock() {
+    unlocked = true;
+    lockScreen.style.display = "none";
+    appRoot.style.display = "block";
+    await loadPosts();
+    render();
+  }
+
+  document.getElementById("logoutBtn").onclick = () => {
+    unlocked = false;
+    showLockScreen();
+  };
+
+  // --- Posts ---
+  async function loadPosts() {
+    try {
+      const value = await storeGet(POSTS_KEY);
+      posts = value ? JSON.parse(value) : [];
+    } catch (e) {
+      posts = [];
+    }
+  }
+  async function savePosts() {
+    try {
+      await storeSet(POSTS_KEY, JSON.stringify(posts));
+    } catch (e) {
+      showToast("Couldn't save. Try again.");
+    }
+  }
+
+  function render() {
+    const list = document.getElementById("postList");
+    const empty = document.getElementById("emptyState");
+    list.innerHTML = "";
+    if (posts.length === 0) {
+      empty.style.display = "block";
+      return;
+    }
+    empty.style.display = "none";
+    const sorted = [...posts].sort((a, b) => b.updatedAt - a.updatedAt);
+    sorted.forEach((p) => {
+      const div = document.createElement("div");
+      div.className = "post";
+      const date = new Date(p.updatedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+      div.innerHTML = `<h2>${escapeHtml(p.title || "Untitled")}</h2><div class="date">${date}</div><p>${escapeHtml(excerpt(p.body))}</p>`;
+      div.onclick = () => openReader(p.id);
+      list.appendChild(div);
+    });
+  }
+
+  // --- Editor ---
+  const editorOverlay = document.getElementById("editorOverlay");
+  const titleInput = document.getElementById("titleInput");
+  const bodyInput = document.getElementById("bodyInput");
+
+  function openEditor(id) {
+    editingId = id || null;
+    const p = id ? posts.find((x) => x.id === id) : null;
+    titleInput.value = p ? p.title : "";
+    bodyInput.value = p ? p.body : "";
+    editorOverlay.classList.add("open");
+    setTimeout(() => titleInput.focus(), 50);
+  }
+  function closeEditor() { editorOverlay.classList.remove("open"); }
+
+  document.getElementById("newPostBtn").onclick = () => openEditor(null);
+  document.getElementById("cancelBtn").onclick = closeEditor;
+  editorOverlay.addEventListener("click", (e) => { if (e.target === editorOverlay) closeEditor(); });
+
+  document.getElementById("saveBtn").onclick = async () => {
+    const title = titleInput.value.trim() || "Untitled";
+    const body = bodyInput.value.trim();
+    if (editingId) {
+      const p = posts.find((x) => x.id === editingId);
+      p.title = title; p.body = body; p.updatedAt = Date.now();
+    } else {
+      posts.push({ id: uid(), title, body, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    await savePosts();
+    showToast("Saved");
+    closeEditor();
+    render();
+  };
+
+  // --- Reader ---
+  const readOverlay = document.getElementById("readOverlay");
+  function openReader(id) {
+    readingId = id;
+    const p = posts.find((x) => x.id === id);
+    document.getElementById("readTitle").textContent = p.title;
+    document.getElementById("readDate").textContent = new Date(p.updatedAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    document.getElementById("readBody").textContent = p.body;
+    readOverlay.classList.add("open");
+  }
+  document.getElementById("closeReadBtn").onclick = () => readOverlay.classList.remove("open");
+  readOverlay.addEventListener("click", (e) => { if (e.target === readOverlay) readOverlay.classList.remove("open"); });
+  document.getElementById("editFromReadBtn").onclick = () => { readOverlay.classList.remove("open"); openEditor(readingId); };
+  document.getElementById("deleteFromReadBtn").onclick = async () => {
+    const p = posts.find((x) => x.id === readingId);
+    if (confirm('Delete "' + p.title + '"? This cannot be undone.')) {
+      posts = posts.filter((x) => x.id !== readingId);
+      await savePosts();
+      readOverlay.classList.remove("open");
+      showToast("Deleted");
+      render();
+    }
+  };
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { closeEditor(); readOverlay.classList.remove("open"); }
+  });
+
+  (async function init() {
+    authHash = await storeGet(AUTH_KEY);
+    showLockScreen();
+  })();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Contact Sheet — Your Photo Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15130F;
+    --ink-2:#1D1A14;
+    --paper:#F2ECE0;
+    --safelight:#D98A3D;
+    --safelight-dim: rgba(217,138,61,0.18);
+    --rust:#A8452A;
+    --ash:#948C7B;
+    --line: rgba(242,236,224,0.10);
+    --line-strong: rgba(242,236,224,0.22);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+  }
+  ::selection{ background:var(--safelight); color:var(--ink); }
+
+  /* Sprocket frame */
+  .sprocket-row{
+    display:flex; gap:14px; padding:8px 20px;
+    background: var(--ink-2);
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .sprocket-row.bottom{ border-bottom:none; border-top:1px solid var(--line); }
+  .sprocket{
+    width:8px; height:8px; border-radius:2px;
+    background: rgba(242,236,224,0.14);
+    flex-shrink:0;
+  }
+
+  header{
+    padding:28px 32px 18px;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    flex-wrap:wrap; gap:16px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size:28px;
+    letter-spacing:-0.01em;
+    color:var(--paper);
+    display:flex; align-items:baseline; gap:10px;
+  }
+  .brand .roll{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--safelight);
+    background:var(--safelight-dim);
+    padding:3px 8px;
+    border-radius:20px;
+    letter-spacing:0.03em;
+  }
+  .stats{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--ash);
+    letter-spacing:0.02em;
+  }
+
+  .toolbar{
+    padding:18px 32px;
+    display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+  }
+  .search{
+    flex:1; min-width:180px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 14px;
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+  }
+  .search:focus{ outline:none; border-color:var(--safelight); }
+  .search::placeholder{ color:var(--ash); }
+
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    cursor:pointer;
+    transition: transform .12s ease, filter .12s ease;
+    white-space:nowrap;
+  }
+  .btn:active{ transform: scale(0.97); }
+  .btn-primary{ background:var(--safelight); color:var(--ink); }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-ghost{ background:transparent; color:var(--paper); border:1px solid var(--line-strong); }
+  .btn-ghost:hover{ border-color:var(--safelight); color:var(--safelight); }
+  .btn-danger{ background:transparent; color:var(--rust); border:1px solid rgba(168,69,42,0.4); }
+  .btn-danger:hover{ background:rgba(168,69,42,0.12); }
+
+  .albums-row{
+    padding:14px 32px;
+    display:flex; gap:8px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+  }
+  .chip{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:20px;
+    border:1px solid var(--line-strong);
+    color:var(--ash);
+    cursor:pointer;
+    background:transparent;
+  }
+  .chip.active{ background:var(--safelight); color:var(--ink); border-color:var(--safelight); font-weight:600; }
+  .chip:hover:not(.active){ border-color:var(--safelight); color:var(--safelight); }
+
+  main{ padding:24px 32px 60px; min-height:40vh; }
+
+  .empty{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:90px 20px;
+    border:1.5px dashed var(--line-strong);
+    border-radius:16px;
+    text-align:center;
+    gap:14px;
+  }
+  .empty.dragover{ border-color:var(--safelight); background:var(--safelight-dim); }
+  .empty h2{
+    font-family:'Fraunces', serif; font-weight:500; font-size:22px; margin:0; color:var(--paper);
+  }
+  .empty p{ color:var(--ash); font-size:14px; margin:0; max-width:340px; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap:14px;
+  }
+  .cell{
+    position:relative;
+    aspect-ratio:1/1;
+    border-radius:10px;
+    overflow:hidden;
+    background:var(--ink-2);
+    cursor:pointer;
+    border:1px solid var(--line);
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .cell:hover{ border-color:var(--safelight); box-shadow: 0 0 0 3px var(--safelight-dim); }
+  .cell img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .cell .frame-no{
+    position:absolute; top:6px; left:6px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    background:rgba(21,19,15,0.7);
+    color:var(--safelight);
+    padding:2px 6px;
+    border-radius:4px;
+    letter-spacing:0.03em;
+  }
+  .cell .del-x{
+    position:absolute; top:6px; right:6px;
+    width:22px; height:22px;
+    background:rgba(21,19,15,0.7);
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--paper);
+    font-size:14px;
+    opacity:0;
+    transition:opacity .12s ease;
+  }
+  .cell:hover .del-x{ opacity:1; }
+  .cell .del-x:hover{ background:var(--rust); }
+
+  /* Lightbox */
+  .lightbox{
+    position:fixed; inset:0; background:rgba(10,9,6,0.92);
+    display:none; align-items:center; justify-content:center;
+    z-index:100; padding:30px;
+    backdrop-filter: blur(4px);
+  }
+  .lightbox.open{ display:flex; }
+  .lb-inner{ max-width:min(92vw, 1100px); max-height:88vh; display:flex; flex-direction:column; gap:14px; align-items:center; }
+  .lb-inner img{ max-width:100%; max-height:70vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+  .lb-meta{
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ash);
+    display:flex; gap:16px; align-items:center; flex-wrap:wrap; justify-content:center;
+  }
+  .lb-actions{ display:flex; gap:10px; }
+  .lb-nav{
+    position:fixed; top:50%; transform:translateY(-50%);
+    background:rgba(242,236,224,0.08); border:1px solid var(--line-strong);
+    color:var(--paper); width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px;
+    z-index:101;
+  }
+  .lb-nav:hover{ border-color:var(--safelight); color:var(--safelight); }
+  .lb-prev{ left:24px; } .lb-next{ right:24px; }
+  .lb-close{
+    position:fixed; top:24px; right:28px; z-index:101;
+    background:transparent; border:none; color:var(--paper); font-size:26px; cursor:pointer;
+  }
+  .lb-close:hover{ color:var(--safelight); }
+
+  #fileInput{ display:none; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; font-size:13.5px; font-weight:600;
+    padding:12px 20px; border-radius:8px; opacity:0; pointer-events:none;
+    transition: opacity .2s ease, transform .2s ease; z-index:200;
+    box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .spinner{
+    width:16px;height:16px;border-radius:50%;
+    border:2px solid rgba(21,19,15,0.25); border-top-color:var(--ink);
+    animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; margin-right:6px;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  @media (max-width:560px){
+    header, .toolbar, .albums-row, main{ padding-left:16px; padding-right:16px; }
+    .lb-nav{ width:38px; height:38px; }
+    .lb-prev{ left:8px; } .lb-next{ right:8px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sprocket-row" id="sprocketTop"></div>
+
+<header>
+  <div class="brand">Contact Sheet <span class="roll" id="rollTag">ROLL 001</span></div>
+  <div class="stats" id="statsLine">loading…</div>
+</header>
+
+<div class="toolbar">
+  <input class="search" id="searchBox" type="text" placeholder="Search by name…" />
+  <button class="btn btn-primary" id="uploadBtn">+ Load photos</button>
+  <button class="btn btn-ghost" id="newAlbumBtn">New roll</button>
+  <input type="file" id="fileInput" accept="image/*" multiple />
+</div>
+
+<div class="albums-row" id="albumsRow"></div>
+
+<main>
+  <div id="emptyState" class="empty" style="display:none;">
+    <h2>Your darkroom is empty</h2>
+    <p>Load a roll to begin. Drop images anywhere on this page, or use the button above. Everything you add stays saved here for next time.</p>
+    <button class="btn btn-primary" id="emptyUploadBtn">+ Load photos</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="sprocket-row bottom" id="sprocketBottom"></div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lbClose">&times;</button>
+  <div class="lb-nav lb-prev" id="lbPrev">&#8249;</div>
+  <div class="lb-nav lb-next" id="lbNext">&#8250;</div>
+  <div class="lb-inner">
+    <img id="lbImg" src="" alt="" />
+    <div class="lb-meta" id="lbMeta"></div>
+    <div class="lb-actions">
+      <button class="btn btn-ghost" id="lbDownload">Download</button>
+      <button class="btn btn-danger" id="lbDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const INDEX_KEY = "gallery-index-v1";
+  let photos = [];      // {id, name, album, createdAt, sizeKB, w, h}
+  let dataCache = {};   // id -> dataUrl
+  let currentAlbum = "all";
+  let searchTerm = "";
+  let lightboxOrder = [];
+
+  // --- Storage layer -------------------------------------------------
+  // Prefer Claude's built-in cloud artifact storage (window.storage) when
+  // available. Otherwise, fall back to the browser's own IndexedDB so the
+  // gallery still works when opened as a plain HTML file (e.g. downloaded
+  // and opened directly in Chrome). IndexedDB storage is local to this
+  // browser/device only — it will not sync across devices.
+  const idbReady = (function(){
+    return new Promise((resolve, reject)=>{
+      const req = indexedDB.open('contact-sheet-gallery', 1);
+      req.onupgradeneeded = ()=>{
+        req.result.createObjectStore('kv', { keyPath: 'key' });
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> reject(req.error);
+    });
+  })();
+
+  const idbStorage = {
+    async get(key){
+      const db = await idbReady;
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction('kv', 'readonly');
+        const req = tx.objectStore('kv').get(key);
+        req.onsuccess = ()=> req.result ? resolve({ key, value: req.result.value }) : reject(new Error('not found'));
+        req.onerror = ()=> reject(req.error);
+      });
+    },
+    async set(key, value){
+      const db = await idbReady;
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction('kv', 'readwrite');
+        tx.objectStore('kv').put({ key, value });
+        tx.oncomplete = ()=> resolve({ key, value });
+        tx.onerror = ()=> reject(tx.error);
+      });
+    },
+    async delete(key){
+      const db = await idbReady;
+      return new Promise((resolve, reject)=>{
+        const tx = db.transaction('kv', 'readwrite');
+        tx.objectStore('kv').delete(key);
+        tx.oncomplete = ()=> resolve({ key, deleted: true });
+        tx.onerror = ()=> reject(tx.error);
+      });
+    }
+  };
+
+  const usingCloudStorage = (typeof window.storage !== 'undefined');
+  const store = usingCloudStorage ? window.storage : idbStorage;
+  // window.storage's methods take a `shared` flag as 2nd/3rd arg; idbStorage ignores it.
+  function storeGet(key){ return usingCloudStorage ? window.storage.get(key, false) : idbStorage.get(key); }
+  function storeSet(key, value){ return usingCloudStorage ? window.storage.set(key, value, false) : idbStorage.set(key, value); }
+  function storeDelete(key){ return usingCloudStorage ? window.storage.delete(key, false) : idbStorage.delete(key); }
+  let lightboxIdx = 0;
+
+  const grid = document.getElementById('grid');
+  const emptyState = document.getElementById('emptyState');
+  const statsLine = document.getElementById('statsLine');
+  const albumsRow = document.getElementById('albumsRow');
+  const fileInput = document.getElementById('fileInput');
+  const toast = document.getElementById('toast');
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 2200);
+  }
+
+  function showErrorBanner(msg){
+    let banner = document.getElementById('errBanner');
+    if(!banner){
+      banner = document.createElement('div');
+      banner.id = 'errBanner';
+      banner.style.cssText = 'position:sticky;top:0;z-index:150;background:#A8452A;color:#F2ECE0;font-family:Inter,sans-serif;font-size:13px;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;';
+      const text = document.createElement('span');
+      text.id = 'errBannerText';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'background:none;border:none;color:#F2ECE0;font-size:16px;cursor:pointer;flex-shrink:0;';
+      closeBtn.onclick = ()=> banner.remove();
+      banner.appendChild(text);
+      banner.appendChild(closeBtn);
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+    document.getElementById('errBannerText').textContent = msg;
+  }
+
+  function buildSprockets(){
+    [document.getElementById('sprocketTop'), document.getElementById('sprocketBottom')].forEach(row=>{
+      row.innerHTML = '';
+      const n = Math.ceil(window.innerWidth / 22);
+      for(let i=0;i<n;i++){
+        const s = document.createElement('div');
+        s.className = 'sprocket';
+        row.appendChild(s);
+      }
+    });
+  }
+  buildSprockets();
+  window.addEventListener('resize', buildSprockets);
+
+  async function loadIndex(){
+    try{
+      const res = await storeGet(INDEX_KEY);
+      photos = res && res.value ? JSON.parse(res.value) : [];
+    }catch(e){
+      // First run: key doesn't exist yet, that's normal
+      photos = [];
+    }
+    if(!usingCloudStorage){
+      showToast('Saving locally on this device (browser storage)');
+    }
+  }
+
+  async function saveIndex(){
+    try{
+      const result = await storeSet(INDEX_KEY, JSON.stringify(photos));
+      if(!result){
+        showErrorBanner("Storage didn't confirm the save. Your photos may not persist — try again or reload.");
+      }
+    }catch(e){
+      showErrorBanner("Couldn't save the photo index: " + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  async function getPhotoData(id){
+    if(dataCache[id]) return dataCache[id];
+    try{
+      const res = await storeGet('photo-data:' + id);
+      const val = JSON.parse(res.value);
+      dataCache[id] = val.dataUrl;
+      return val.dataUrl;
+    }catch(e){
+      return null;
+    }
+  }
+
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const MAX = 1600;
+          let w = img.width, h = img.height;
+          if(w > MAX || h > MAX){
+            if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
+            else{ w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+          resolve({ dataUrl, w, h });
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function uid(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+
+  async function addFiles(fileList){
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    if(files.length === 0){
+      showErrorBanner("Those files weren't recognized as images (no image/* type). Try picking JPG or PNG files.");
+      return;
+    }
+    showToast('Developing ' + files.length + ' photo' + (files.length>1?'s':'') + '…');
+    let added = 0;
+    const errors = [];
+    for(const file of files){
+      try{
+        const { dataUrl, w, h } = await compressImage(file);
+        const id = uid();
+        const sizeKB = Math.round(dataUrl.length * 0.75 / 1024);
+        const result = await storeSet('photo-data:' + id, JSON.stringify({ dataUrl }));
+        if(!result) throw new Error('storage did not confirm save');
+        dataCache[id] = dataUrl;
+        photos.unshift({
+          id, name: file.name.replace(/\.[^/.]+$/, ''),
+          album: currentAlbum === 'all' ? 'Unsorted' : currentAlbum,
+          createdAt: Date.now(), sizeKB, w, h
+        });
+        added++;
+      }catch(e){
+        const reason = e && e.message ? e.message : String(e);
+        errors.push(file.name + ': ' + reason);
+        console.error('Failed to add', file.name, e);
+      }
+    }
+    if(added > 0) await saveIndex();
+    showToast(added + ' photo' + (added===1?'':'s') + ' saved' + (errors.length ? ', ' + errors.length + ' failed' : ''));
+    if(errors.length){
+      showErrorBanner('Some photos failed to load — ' + errors[0] + (errors.length > 1 ? ' (+' + (errors.length-1) + ' more)' : ''));
+    }
+    render();
+  }
+
+  async function deletePhoto(id){
+    photos = photos.filter(p => p.id !== id);
+    delete dataCache[id];
+    await saveIndex();
+    try{ await storeDelete('photo-data:' + id); }catch(e){}
+    render();
+  }
+
+  function getAlbums(){
+    const set = new Set(photos.map(p => p.album || 'Unsorted'));
+    return Array.from(set);
+  }
+
+  function filteredPhotos(){
+    return photos.filter(p=>{
+      const matchesAlbum = currentAlbum === 'all' || (p.album || 'Unsorted') === currentAlbum;
+      const matchesSearch = !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesAlbum && matchesSearch;
+    });
+  }
+
+  function renderAlbums(){
+    const albums = getAlbums();
+    albumsRow.innerHTML = '';
+    const allChip = document.createElement('button');
+    allChip.className = 'chip' + (currentAlbum === 'all' ? ' active' : '');
+    allChip.textContent = 'ALL · ' + photos.length;
+    allChip.onclick = ()=>{ currentAlbum = 'all'; render(); };
+    albumsRow.appendChild(allChip);
+    albums.forEach(a=>{
+      const count = photos.filter(p => (p.album || 'Unsorted') === a).length;
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (currentAlbum === a ? ' active' : '');
+      chip.textContent = a.toUpperCase() + ' · ' + count;
+      chip.onclick = ()=>{ currentAlbum = a; render(); };
+      albumsRow.appendChild(chip);
+    });
+  }
+
+  async function renderGrid(){
+    const list = filteredPhotos();
+    grid.innerHTML = '';
+    if(photos.length === 0){
+      emptyState.style.display = 'flex';
+      grid.style.display = 'none';
+      return;
+    }
+    emptyState.style.display = 'none';
+    grid.style.display = 'grid';
+
+    lightboxOrder = list.map(p => p.id);
+
+    list.forEach((p, i)=>{
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.id = p.id;
+
+      const frameNo = document.createElement('div');
+      frameNo.className = 'frame-no';
+      frameNo.textContent = String(list.length - i).padStart(2,'0');
+      cell.appendChild(frameNo);
+
+      const del = document.createElement('div');
+      del.className = 'del-x';
+      del.innerHTML = '&times;';
+      del.onclick = (e)=>{ e.stopPropagation(); if(confirm('Delete "' + p.name + '"? This cannot be undone.')) deletePhoto(p.id); };
+      cell.appendChild(del);
+
+      cell.onclick = ()=> openLightbox(p.id);
+      grid.appendChild(cell);
+
+      getPhotoData(p.id).then(url=>{
+        if(!url) return;
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = p.name;
+        cell.appendChild(img);
+      });
+    });
+  }
+
+  function totalSizeLabel(){
+    const kb = photos.reduce((sum,p)=> sum + (p.sizeKB||0), 0);
+    if(kb > 1024) return (kb/1024).toFixed(1) + ' MB';
+    return kb + ' KB';
+  }
+
+  function render(){
+    renderAlbums();
+    renderGrid();
+    statsLine.textContent = photos.length + ' exposure' + (photos.length===1?'':'s') + ' · ' + totalSizeLabel() + ' stored';
+    document.getElementById('rollTag').textContent = currentAlbum === 'all' ? 'ALL ROLLS' : currentAlbum.toUpperCase();
+  }
+
+  // Lightbox
+  const lightbox = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbMeta = document.getElementById('lbMeta');
+
+  async function openLightbox(id){
+    lightboxIdx = lightboxOrder.indexOf(id);
+    await showLightboxAt(lightboxIdx);
+    lightbox.classList.add('open');
+  }
+
+  async function showLightboxAt(idx){
+    if(idx < 0 || idx >= lightboxOrder.length) return;
+    lightboxIdx = idx;
+    const id = lightboxOrder[idx];
+    const p = photos.find(x => x.id === id);
+    const url = await getPhotoData(id);
+    lbImg.src = url;
+    lbImg.alt = p.name;
+    const date = new Date(p.createdAt).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    lbMeta.textContent = p.name + '  ·  ' + p.w + '×' + p.h + '  ·  ' + p.sizeKB + ' KB  ·  ' + date;
+    lightbox.dataset.currentId = id;
+  }
+
+  document.getElementById('lbClose').onclick = ()=> lightbox.classList.remove('open');
+  lightbox.addEventListener('click', (e)=>{ if(e.target === lightbox) lightbox.classList.remove('open'); });
+  document.getElementById('lbPrev').onclick = ()=> showLightboxAt(lightboxIdx - 1);
+  document.getElementById('lbNext').onclick = ()=> showLightboxAt(lightboxIdx + 1);
+  document.addEventListener('keydown', (e)=>{
+    if(!lightbox.classList.contains('open')) return;
+    if(e.key === 'Escape') lightbox.classList.remove('open');
+    if(e.key === 'ArrowLeft') showLightboxAt(lightboxIdx - 1);
+    if(e.key === 'ArrowRight') showLightboxAt(lightboxIdx + 1);
+  });
+  document.getElementById('lbDownload').onclick = ()=>{
+    const id = lightbox.dataset.currentId;
+    const p = photos.find(x => x.id === id);
+    const a = document.createElement('a');
+    a.href = lbImg.src;
+    a.download = (p ? p.name : 'photo') + '.jpg';
+    a.click();
+  };
+  document.getElementById('lbDelete').onclick = async ()=>{
+    const id = lightbox.dataset.currentId;
+    const p = photos.find(x => x.id === id);
+    if(!confirm('Delete "' + (p ? p.name : 'this photo') + '"? This cannot be undone.')) return;
+    await deletePhoto(id);
+    lightbox.classList.remove('open');
+  };
+
+  // Upload wiring
+  document.getElementById('uploadBtn').onclick = ()=> fileInput.click();
+  document.getElementById('emptyUploadBtn').onclick = ()=> fileInput.click();
+  fileInput.onchange = (e)=> { addFiles(e.target.files); fileInput.value = ''; };
+
+  document.getElementById('newAlbumBtn').onclick = ()=>{
+    const name = prompt('Name this roll (album):');
+    if(name && name.trim()){
+      currentAlbum = name.trim();
+      render();
+      showToast('Ready — next photos you load will go into "' + name.trim() + '"');
+    }
+  };
+
+  document.getElementById('searchBox').oninput = (e)=>{
+    searchTerm = e.target.value;
+    renderGrid();
+  };
+
+  // Drag and drop anywhere
+  let dragCounter = 0;
+  document.addEventListener('dragenter', (e)=>{ e.preventDefault(); dragCounter++; emptyState.classList.add('dragover'); });
+  document.addEventListener('dragover', (e)=> e.preventDefault());
+  document.addEventListener('dragleave', (e)=>{ dragCounter--; if(dragCounter<=0) emptyState.classList.remove('dragover'); });
+  document.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    dragCounter = 0;
+    emptyState.classList.remove('dragover');
+    if(e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+
+  // Init
+  (async function init(){
+    await loadIndex();
+    render();
+  })();
+})();
+</script>
+
+</body>
+</html>
